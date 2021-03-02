@@ -27,11 +27,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Scanned
 public class IssueCRUD extends HttpServlet {
@@ -50,6 +49,7 @@ public class IssueCRUD extends HttpServlet {
     @JiraImport
     private ConstantsManager constantsManager;
 
+
     private static final String LIST_ISSUES_TEMPLATE = "/templates/list.vm";
     private static final String NEW_ISSUE_TEMPLATE = "/templates/new.vm";
     private static final String EDIT_ISSUE_TEMPLATE = "/templates/edit.vm";
@@ -66,7 +66,13 @@ public class IssueCRUD extends HttpServlet {
         this.authenticationContext = authenticationContext;
         this.constantsManager = constantsManager;
     }
+private Map<String, Long> countWords (){
+    Stream<String> concat = Stream.concat(Objects.requireNonNull(getIssues()).stream()
+            .map(Issue::getDescription), Objects.requireNonNull(getIssues()).stream().map(Issue::getSummary));
+    return concat.map(w -> w.split("\\s+")).flatMap(Arrays::stream)
+            .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
+}
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String action = Optional.ofNullable(req.getParameter("actionType")).orElse("");
@@ -85,7 +91,9 @@ public class IssueCRUD extends HttpServlet {
                 break;
             default:
                 List<Issue> issues = getIssues();
+                Map<String, Long> countWords = countWords();
                 context.put("issues", issues);
+                context.put("countWords", countWords);
                 templateRenderer.render(LIST_ISSUES_TEMPLATE, context, resp.getWriter());
         }
 
